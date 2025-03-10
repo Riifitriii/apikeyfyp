@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabel Kawan (API Serverless)</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; text-align: center; }
+        table { width: 90%; margin: 20px auto; border-collapse: collapse; background: rgb(255, 235, 235); }
+        th, td { border: 1px solid black; padding: 10px; text-align: center; }
+        button { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>Tabel Kawan Fitri Yani P</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>NIM</th>
+                <th>Nama</th>
+                <th>Kelas</th>
+                <th>Prodi</th>
+                <th>Alamat</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="kawanList"></tbody>
+    </table>
+    <button onclick="addKawan()">Tambah Kawan</button>
+
+    <script>
+        const API_URL = "https://api.jsonbin.io/v3/b/67ce9ece8561e97a50e93b08";
+        const API_KEY = "$2a$10$GPVG/eS./D46T4aHBMcnr.7Gcckf/R.tHpIDpDJ/OnQaffL5FI92O"; // JANGAN DIBAGIKAN KE ORANG LAIN
+
+        // 🔹 Load Data dari API Serverless
+        async function loadFromAPI() {
+            try {
+                let response = await fetch(API_URL, {
+                    method: "GET",
+                    headers: { "X-Master-Key": API_KEY }
+                });
+                let result = await response.json();
+                return result.record || [];
+            } catch (error) {
+                console.error("Gagal mengambil data:", error);
+                return [];
+            }
+        }
+
+        // 🔹 Simpan Data ke API Serverless
+        async function saveToAPI(data) {
+            try {
+                await fetch(API_URL, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Master-Key": API_KEY
+                    },
+                    body: JSON.stringify(data)
+                });
+            } catch (error) {
+                console.error("Gagal menyimpan data:", error);
+            }
+        }
+
+        // 🔹 Render Data ke Tabel
+        async function renderTable() {
+            let tbody = document.getElementById("kawanList");
+            tbody.innerHTML = "";
+            let data = await loadFromAPI();
+
+            data.forEach((row, index) => {
+                let tr = tbody.insertRow();
+                tr.innerHTML = `<td>${index + 1}</td>
+                                <td ondblclick="editCell(this, ${index}, 'nim')">${row.nim}</td>
+                                <td ondblclick="editCell(this, ${index}, 'nama')">${row.nama}</td>
+                                <td ondblclick="editCell(this, ${index}, 'kelas')">${row.kelas}</td>
+                                <td ondblclick="editCell(this, ${index}, 'prodi')">${row.prodi}</td>
+                                <td ondblclick="editCell(this, ${index}, 'alamat')">${row.alamat}</td>
+                                <td><button onclick="deleteKawan(${index})">Hapus</button></td>`;
+            });
+        }
+
+        // 🔹 Edit Cell (Double Click)
+        async function editCell(cell, index, field) {
+            let oldValue = cell.textContent;
+            cell.innerHTML = `<input type="text" value="${oldValue}">
+                              <button onclick="saveEdit(this, ${index}, '${field}')">OK</button>
+                              <button onclick="cancelEdit(this, '${oldValue}')">Cancel</button>`;
+            cell.querySelector("input").focus();
+        }
+
+        // 🔹 Simpan Perubahan Edit
+        async function saveEdit(button, index, field) {
+            let input = button.parentElement.querySelector("input");
+            let newValue = input.value.trim();
+
+            let data = await loadFromAPI();
+            data[index][field] = newValue;
+            await saveToAPI(data);
+            renderTable();
+        }
+
+        // 🔹 Batalkan Edit
+        function cancelEdit(button, oldValue) {
+            button.parentElement.innerHTML = oldValue;
+        }
+
+        // 🔹 Hapus Baris
+        async function deleteKawan(index) {
+            let data = await loadFromAPI();
+            data.splice(index, 1);
+            await saveToAPI(data);
+            renderTable();
+        }
+
+        // 🔹 Tambah Kawan Baru (Dummy Data)
+        async function addKawan() {
+            let data = await loadFromAPI();
+            data.push({ nim: "123456789", nama: "Nama Baru", kelas: "TI-1", prodi: "Sistem Informasi", alamat: "Bandung" });
+            await saveToAPI(data);
+            renderTable();
+        }
+
+        // Load data saat halaman dibuka
+        window.onload = renderTable;
+    </script>
+</body>
+</html>
